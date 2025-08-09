@@ -1,178 +1,104 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple Calculator</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Simple Calculator (Improved)</title>
   <style>
-    :root{--bg:#0f172a;--card:#0b1220;--accent:#60a5fa;--muted:#94a3b8}
-    *{box-sizing:border-box}
-    body{min-height:100vh;display:grid;place-items:center;margin:0;background:linear-gradient(180deg,#071029 0%, #011627 100%);font-family:Inter, system-ui, Arial;color:white}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));width:360px;border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
-    .screen{background:transparent;border-radius:10px;padding:14px 12px;margin-bottom:12px;min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end}
-    .history{font-size:13px;color:var(--muted);opacity:.9}
-    .result{font-size:28px;font-weight:600;word-break:break-all}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-    button{padding:16px;border-radius:10px;border:0;background:rgba(255,255,255,0.03);color:inherit;font-size:18px;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(0,0,0,0.2)}
-    button.operator{background:linear-gradient(180deg, rgba(96,165,250,0.12), rgba(96,165,250,0.07));color:var(--accent);font-weight:600}
-    button.control{background:rgba(255,255,255,0.03);color:var(--muted)}
-    button.equals{grid-column:span 2;background:var(--accent);color:#021025;font-weight:700}
-    @media(max-width:400px){.card{width:92vw}}
+    body { display:flex; justify-content:center; align-items:center; height:100vh; background:#f0f2f5; margin:0; font-family:Arial, sans-serif; }
+    .calculator { background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1); width:320px; }
+    .display { width:100%; height:50px; font-size:1.5rem; text-align:right; padding:5px 10px; margin-bottom:10px; border:none; background:#e9ecef; border-radius:4px; }
+    .buttons { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .btn { padding:15px; font-size:1.2rem; border:none; border-radius:4px; cursor:pointer; background:#007bff; color:#fff; transition:background .2s; }
+    .btn:hover { background:#0056b3; }
+    .btn.operator { background:#17a2b8; }
+    .btn.equals { background:#28a745; grid-column:span 2; }
+    .btn.clear { background:#dc3545; }
   </style>
 </head>
 <body>
-  <main class="card" role="application" aria-label="Calculator">
-    <div class="screen" id="screen">
-      <div class="history" id="history">&nbsp;</div>
-      <div class="result" id="result">0</div>
+  <div class="calculator">
+    <input type="text" id="display" class="display" disabled value="0">
+    <div class="buttons">
+      <button class="btn clear" onclick="clearCalc()">C</button>
+      <button class="btn operator" onclick="chooseOp('/')">÷</button>
+      <button class="btn operator" onclick="chooseOp('*')">×</button>
+      <button class="btn operator" onclick="chooseOp('-')">−</button>
+
+      <button class="btn" onclick="append('7')">7</button>
+      <button class="btn" onclick="append('8')">8</button>
+      <button class="btn" onclick="append('9')">9</button>
+      <button class="btn operator" onclick="chooseOp('+')">+</button>
+
+      <button class="btn" onclick="append('4')">4</button>
+      <button class="btn" onclick="append('5')">5</button>
+      <button class="btn" onclick="append('6')">6</button>
+      <button class="btn equals" onclick="compute()">=</button>
+
+      <button class="btn" onclick="append('1')">1</button>
+      <button class="btn" onclick="append('2')">2</button>
+      <button class="btn" onclick="append('3')">3</button>
+      <button class="btn" onclick="append('0')">0</button>
     </div>
-
-    <div class="grid" id="keys">
-      <button class="control" data-action="clear">C</button>
-      <button class="control" data-action="back">⌫</button>
-      <button class="control" data-action="percent">%</button>
-      <button class="operator" data-action="/">÷</button>
-
-      <button data-digit>7</button>
-      <button data-digit>8</button>
-      <button data-digit>9</button>
-      <button class="operator" data-action="*">×</button>
-
-      <button data-digit>4</button>
-      <button data-digit>5</button>
-      <button data-digit>6</button>
-      <button class="operator" data-action="-">−</button>
-
-      <button data-digit>1</button>
-      <button data-digit>2</button>
-      <button data-digit>3</button>
-      <button class="operator" data-action="+">+</button>
-
-      <button data-digit>0</button>
-      <button data-digit>.</button>
-      <button class="equals" data-action="equals">=</button>
-    </div>
-  </main>
+  </div>
 
   <script>
-    // Simple, safe calculator logic (no eval)
-    (function(){
-      const historyEl = document.getElementById('history');
-      const resultEl = document.getElementById('result');
-      let display = '0';
-      let expression = []; // tokens (numbers and operators)
-      let waitingForNumber = true;
+    let current = '';
+    let previous = '';
+    let operation = null;
+    const display = document.getElementById('display');
 
-      function updateScreen(){
-        historyEl.textContent = expression.join(' ') || '\u00A0';
-        resultEl.textContent = display;
-      }
+    function append(num) {
+      if (num === '.' && current.includes('.')) return;
+      current = current === '0' && num !== '.' ? num : current + num;
+      updateDisplay();
+    }
 
-      function pushNumber(str){
-        if(waitingForNumber){
-          display = str === '.' ? '0.' : str;
-          waitingForNumber = false;
-        } else {
-          if(str === '.' && display.includes('.')) return;
-          display = display === '0' && str !== '.' ? str : display + str;
-        }
-        updateScreen();
-      }
+    function chooseOp(op) {
+      if (current === '') return;
+      if (previous !== '') compute();
+      operation = op;
+      previous = current;
+      current = '';
+    }
 
-      function pushOperator(op){
-        if(!waitingForNumber){
-          expression.push(display);
-          waitingForNumber = true;
-        }
-        // replace operator if last token is operator
-        if(expression.length && ['+','-','*','/','%'].includes(expression[expression.length-1])){
-          expression[expression.length-1] = op;
-        } else {
-          expression.push(op);
-        }
-        updateScreen();
-      }
+    function compute() {
+      if (previous === '' || current === '' || operation === null) return;
+      const prev = parseFloat(previous);
+      const cur = parseFloat(current);
+      let result;
 
-      function clearAll(){ display='0'; expression=[]; waitingForNumber=true; updateScreen(); }
-      function backspace(){ if(!waitingForNumber){ display = display.slice(0,-1) || '0'; if(display==='-') display='0'; updateScreen(); } }
-
-      function percent(){
-        // turn current display into percentage of 1
-        const num = parseFloat(display);
-        if(!isNaN(num)){
-          display = String(num / 100);
-          updateScreen();
-        }
-      }
-
-      function compute(){
-        if(!waitingForNumber){ expression.push(display); }
-        if(!expression.length) return;
-        // Convert infix tokens to RPN using Shunting-yard then evaluate RPN
-        const outputQueue = [];
-        const opStack = [];
-        const prec = { '+':1, '-':1, '*':2, '/':2, '%':2 };
-        expression.forEach(token => {
-          if(/^[0-9.\-]+$/.test(token) && token !== '+' && token !== '-' && token !== '*' && token !== '/' && token !== '%'){
-            outputQueue.push(token);
-          } else if(['+','-','*','/','%'].includes(token)){
-            while(opStack.length && prec[opStack[opStack.length-1]] >= prec[token]){
-              outputQueue.push(opStack.pop());
-            }
-            opStack.push(token);
+      switch (operation) {
+        case '+': result = prev + cur; break;
+        case '-': result = prev - cur; break;
+        case '*': result = prev * cur; break;
+        case '/':
+          if (cur === 0) {
+            alert('Cannot divide by zero');
+            clearCalc();
+            return;
           }
-        });
-        while(opStack.length) outputQueue.push(opStack.pop());
-
-        // Evaluate RPN
-        const st = [];
-        for(const t of outputQueue){
-          if(!['+','-','*','/','%'].includes(t)){
-            st.push(parseFloat(t));
-          } else {
-            const b = st.pop();
-            const a = st.pop();
-            let res = 0;
-            if(t === '+') res = a + b;
-            if(t === '-') res = a - b;
-            if(t === '*') res = a * b;
-            if(t === '/') res = b === 0 ? NaN : a / b;
-            if(t === '%') res = a % b;
-            st.push(res);
-          }
-        }
-        const final = st.pop();
-        display = String(Number.isFinite(final) ? +final.toPrecision(12) : 'Error');
-        expression = [];
-        waitingForNumber = true;
-        updateScreen();
+          result = prev / cur;
+          break;
+        default: return;
       }
 
-      document.getElementById('keys').addEventListener('click', function(e){
-        const btn = e.target.closest('button'); if(!btn) return;
-        const digit = btn.getAttribute('data-digit');
-        const action = btn.getAttribute('data-action');
-        if(digit !== null) return pushNumber(digit);
-        if(action === 'clear') return clearAll();
-        if(action === 'back') return backspace();
-        if(action === 'percent') return percent();
-        if(action === 'equals') return compute();
-        // otherwise operator
-        pushOperator(action);
-      });
+      current = parseFloat(result.toPrecision(12)).toString();
+      operation = null;
+      previous = '';
+      updateDisplay();
+    }
 
-      // keyboard support
-      window.addEventListener('keydown', (e)=>{
-        if(e.key >= '0' && e.key <= '9') pushNumber(e.key);
-        if(e.key === '.') pushNumber('.');
-        if(['+','-','*','/','%'].includes(e.key)) pushOperator(e.key);
-        if(e.key === 'Enter' || e.key === '=') { e.preventDefault(); compute(); }
-        if(e.key === 'Backspace') backspace();
-        if(e.key === 'Escape') clearAll();
-      });
+    function clearCalc() {
+      current = '';
+      previous = '';
+      operation = null;
+      display.value = '0';
+    }
 
-      updateScreen();
-    })();
+    function updateDisplay() {
+      display.value = current || previous || '0';
+    }
   </script>
 </body>
 </html>
