@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Simple Calculator (Improved)</title>
+  <style>
+    body { display:flex; justify-content:center; align-items:center; height:100vh; background:#f0f2f5; margin:0; font-family:Arial, sans-serif; }
+    .calculator { background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1); width:320px; }
+    .display { width:100%; height:50px; font-size:1.5rem; text-align:right; padding:5px 10px; margin-bottom:10px; border:none; background:#e9ecef; border-radius:4px; }
+    .buttons { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .btn { padding:15px; font-size:1.2rem; border:none; border-radius:4px; cursor:pointer; background:#007bff; color:#fff; transition:background .2s; }
+    .btn:hover { background:#0056b3; }
+    .btn.operator { background:#17a2b8; }
+    .btn.equals { background:#28a745; grid-column:span 2; }
+    .btn.clear { background:#dc3545; }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <input type="text" id="display" class="display" disabled value="0">
+    <div class="buttons">
+      <button class="btn clear" onclick="clearCalc()">C</button>
+      <button class="btn operator" onclick="chooseOp('/')">÷</button>
+      <button class="btn operator" onclick="chooseOp('*')">×</button>
+      <button class="btn operator" onclick="chooseOp('-')">−</button>
+
+      <button class="btn" onclick="append('7')">7</button>
+      <button class="btn" onclick="append('8')">8</button>
+      <button class="btn" onclick="append('9')">9</button>
+      <button class="btn operator" onclick="chooseOp('+')">+</button>
+
+      <button class="btn" onclick="append('4')">4</button>
+      <button class="btn" onclick="append('5')">5</button>
+      <button class="btn" onclick="append('6')">6</button>
+      <button class="btn equals" onclick="compute()">=</button>
+
+      <button class="btn" onclick="append('1')">1</button>
+      <button class="btn" onclick="append('2')">2</button>
+      <button class="btn" onclick="append('3')">3</button>
+      <button class="btn" onclick="append('0')">0</button>
+    </div>
+  </div>
+
+  <script>
+    let current = '';
+    let previous = '';
+    let operation = null;
+    const display = document.getElementById('display');
+
+    function append(num) {
+      if (num === '.' && current.includes('.')) return;
+      current = current === '0' && num !== '.' ? num : current + num;
+      updateDisplay();
+    }
+
+    function chooseOp(op) {
+      if (current === '') return;
+      if (previous !== '') compute();
+      operation = op;
+      previous = current;
+      current = '';
+    }
+
+    function compute() {
+      if (previous === '' || current === '' || operation === null) return;
+      const prev = parseFloat(previous);
+      const cur = parseFloat(current);
+      let result;
+
+      switch (operation) {
+        case '+': result = prev + cur; break;
+        case '-': result = prev - cur; break;
+        case '*': result = prev * cur; break;
+        case '/':
+          if (cur === 0) {
+            alert('Cannot divide by zero');
+            clearCalc();
+            return;
+          }
+          result = prev / cur;
+          break;
+        default: return;
+      }
+
+      current = parseFloat(result.toPrecision(12)).toString();
+      operation = null;
+      previous = '';
+      updateDisplay();
+    }
+
+    function clearCalc() {
+      current = '';
+      previous = '';
+      operation = null;
+      display.value = '0';
+    }
+
+    function updateDisplay() {
+      display.value = current || previous || '0';
+    }
+  </script>
+</body>
+</html>
